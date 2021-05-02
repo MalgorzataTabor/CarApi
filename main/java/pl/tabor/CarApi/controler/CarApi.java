@@ -2,6 +2,7 @@ package pl.tabor.CarApi.controler;
 
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pl.tabor.CarApi.model.Car;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
 
 import static pl.tabor.CarApi.model.Color.*;
 
-@RestController
+@RestController()
 @RequestMapping("/cars")
 public class CarApi {
 
@@ -31,7 +32,11 @@ public class CarApi {
         carList.add(new Car(3L, "Ferrari", "F430", BLACK));
     }
 
-    @GetMapping
+
+    @GetMapping(produces = {
+            MediaType.APPLICATION_ATOM_XML_VALUE,
+            MediaType.APPLICATION_JSON_VALUE
+    })
     public ResponseEntity<Car> getCarList() {
         return new ResponseEntity(carList, HttpStatus.OK);
     }
