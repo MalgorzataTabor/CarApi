@@ -26,9 +26,9 @@ public class CarApi {
         this.carList = new ArrayList<>();
 
 
-        carList.add(new Car(1L, "Adi", "Q5", RED));
-        carList.add(new Car(2L, "Wolksvagen", "Passat", RED));
-        carList.add(new Car(3L, "Ferrari", "daczer", BLACK));
+        carList.add(new Car(1L, "BMW", "X5", RED));
+        carList.add(new Car(2L, "Fiat", "126P", RED));
+        carList.add(new Car(3L, "Ferrari", "F430", BLACK));
     }
 
     @GetMapping
