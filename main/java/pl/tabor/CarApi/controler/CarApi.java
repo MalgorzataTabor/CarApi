@@ -1,119 +1,127 @@
 package pl.tabor.CarApi.controler;
 
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import pl.tabor.CarApi.model.Car;
 import pl.tabor.CarApi.model.Color;
+import pl.tabor.CarApi.service.CarService;
 
-
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static pl.tabor.CarApi.model.Color.*;
 
 @RestController()
 @RequestMapping("/cars")
 public class CarApi {
 
-    private final List<Car> carList;
+    private CarService carService;
 
 
-    public CarApi() {
-        this.carList = new ArrayList<>();
-
-
-        carList.add(new Car(1L, "BMW", "X5", RED));
-        carList.add(new Car(2L, "Fiat", "126P", RED));
-        carList.add(new Car(3L, "Ferrari", "F430", BLACK));
+    @Autowired
+    public CarApi(CarService carService) {
+        this.carService = carService;
     }
 
 
     @GetMapping(produces = {
-            MediaType.APPLICATION_ATOM_XML_VALUE,
+            //  MediaType.APPLICATION_ATOM_XML_VALUE,
             MediaType.APPLICATION_JSON_VALUE
     })
-    public ResponseEntity<Car> getCarList() {
-        return new ResponseEntity(carList, HttpStatus.OK);
+    public ResponseEntity<List<Car>> getCars() {
+        if (carService.getAllCars().isPresent()) {
+
+            return ResponseEntity.ok(carService.getAllCars().get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+
+        /*carList.forEach(car -> car.add(linkTo(CarApi.class).slash(car.getId()).withSelfRel()));
+
+        return new ResponseEntity(carList, HttpStatus.OK);*/
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Car> getCarById(@PathVariable Long id) {
+    public ResponseEntity<Car> getCarById(@PathVariable long id) {
 
-        Optional<Car> first = carList.stream().filter(car -> car.getId() == id).findFirst();
+        return carService.getCarById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+
+       /* Optional<Car> first = carList.stream().filter(car -> car.getId() == id).findFirst();
+
         if (first.isPresent()) {
             return new ResponseEntity<>(first.get(), HttpStatus.OK);
         }
-        return new ResponseEntity(HttpStatus.NOT_FOUND);
+        return new ResponseEntity(HttpStatus.NOT_FOUND);*/
     }
 
     @GetMapping("/color/{color}")
     public ResponseEntity<List<Car>> getCarsByColor(@PathVariable Color color) {
 
-        List<Car> newCarList = carList.stream().filter(car -> car.getColor().equals(color)).collect(Collectors.toList());
 
-        if (!newCarList.isEmpty()) {
-            return new ResponseEntity<>(newCarList, HttpStatus.OK);
+        List<Car> carsByColor = carService.getCarsByColor(String.valueOf(color));
+
+        if (!carsByColor.isEmpty()) {
+            return ResponseEntity.ok(carsByColor);
+        } else {
+            return ResponseEntity.notFound().build();
         }
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
 
     }
 
     @PostMapping
-    public ResponseEntity<Car> addCar(@RequestBody Car car) {
-        boolean add = carList.add(car);
+    public ResponseEntity<Car> addCar(@Validated @RequestBody Car car, BindingResult bindingResult) {
+        boolean isAdd = carService.addCar(car);
 
-        if (add) {
-            return new ResponseEntity<>(HttpStatus.OK);
+        if (isAdd) {
+            carService.addCar(car);
+            return ResponseEntity.ok().build();
+
         }
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        return ResponseEntity.notFound().build();
     }
 
     @PutMapping
-    public ResponseEntity<Car> modCar(@RequestBody Car newCar) {
+    public ResponseEntity<Car> modCar(@RequestBody Car newCar, BindingResult bindingResult) {
 
-        Optional<Car> first = carList.stream().filter(car1 -> car1.getId() == newCar.getId()).findFirst();
+        boolean isDeleted = carService.deleteCar(newCar.getId());
+        boolean isUpdate = carService.addCar(newCar);
 
-        if (first.isPresent()) {
-            carList.remove(first.get());
-            carList.add(newCar);
-            return new ResponseEntity<>(HttpStatus.OK);
+        if (isDeleted && isUpdate) {
+            return ResponseEntity.ok().build();
         }
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return ResponseEntity.notFound().build();
+
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity updateCarProperty(@PathVariable long id, @RequestBody Car updateCar) {
 
-    @PatchMapping("update/{id}")
-    public ResponseEntity updateCar(@PathVariable Long id, @RequestBody Car updateCar) {
 
-        Optional<Car> currentCarData = carList.stream().filter(car -> car.getId() == id).findFirst();
+        boolean isUpdated = carService.updateCar(id, updateCar);
 
-        if (currentCarData.isPresent()) {
-
-            if (updateCar.getModel() != null) currentCarData.get().setModel(updateCar.getModel());
-            if (updateCar.getMark() != null) currentCarData.get().setMark(updateCar.getMark());
-            if (updateCar.getColor() != null) currentCarData.get().setColor(updateCar.getColor());
-
-            return new ResponseEntity(updateCar, HttpStatus.OK);
+        if (isUpdated) {
+            return ResponseEntity.ok().build();
         }
-        return new ResponseEntity(updateCar, HttpStatus.NOT_FOUND);
+        return ResponseEntity.notFound().build();
     }
+
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Car> deleteCarById(@PathVariable Long id) {
+    public ResponseEntity<Car> deleteCarById(@PathVariable long id) {
+        boolean isCarDeleted = carService.deleteCar(id);
 
-        Optional<Car> first = carList.stream().filter(car -> car.getId() == id).findFirst();
-        if (first.isPresent()) {
-            carList.remove(first.get());
-
-            return new ResponseEntity<>(first.get(), HttpStatus.OK);
+        if (isCarDeleted) {
+            return ResponseEntity.ok().build();
         }
-        return new ResponseEntity<>(HttpStatus.GONE);
+        return ResponseEntity.notFound().build();
+
     }
 
 
