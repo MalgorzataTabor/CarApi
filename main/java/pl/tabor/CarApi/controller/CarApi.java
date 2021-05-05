@@ -1,29 +1,34 @@
-package pl.tabor.CarApi.controler;
+package pl.tabor.CarApi.controller;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.hateoas.Link;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import pl.tabor.CarApi.model.Car;
 import pl.tabor.CarApi.model.Color;
-import pl.tabor.CarApi.service.CarService;
+import pl.tabor.CarApi.service.CarServiceImpl;
+
 
 import java.util.List;
+
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
 
 @RestController()
 @RequestMapping("/cars")
 public class CarApi {
 
-    private CarService carService;
+    private final CarServiceImpl carService;
 
 
     @Autowired
-    public CarApi(CarService carService) {
+    public CarApi(CarServiceImpl carService) {
         this.carService = carService;
     }
 
@@ -33,31 +38,27 @@ public class CarApi {
             MediaType.APPLICATION_JSON_VALUE
     })
     public ResponseEntity<List<Car>> getCars() {
-        if (carService.getAllCars().isPresent()) {
+        List<Car> carModels = carService.getCarList();
+        if (!carModels.isEmpty()) {
 
-            return ResponseEntity.ok(carService.getAllCars().get());
+            carModels.forEach(car -> car.addIf(!car.hasLinks(), () -> linkTo(CarApi.class).slash(car.getId()).withSelfRel()));
+            Link link = linkTo(CarApi.class).withSelfRel();
+
+            return new ResponseEntity<List<Car>>(carService.getAllCars().get(), HttpStatus.FOUND);
         } else {
             return ResponseEntity.notFound().build();
         }
-
-        /*carList.forEach(car -> car.add(linkTo(CarApi.class).slash(car.getId()).withSelfRel()));
-
-        return new ResponseEntity(carList, HttpStatus.OK);*/
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Car> getCarById(@PathVariable long id) {
 
         return carService.getCarById(id)
-                .map(ResponseEntity::ok)
+                .map(car -> {
+                    addLinkToCar(car);
+                    return ResponseEntity.ok(car);
+                })
                 .orElseGet(() -> ResponseEntity.notFound().build());
-
-       /* Optional<Car> first = carList.stream().filter(car -> car.getId() == id).findFirst();
-
-        if (first.isPresent()) {
-            return new ResponseEntity<>(first.get(), HttpStatus.OK);
-        }
-        return new ResponseEntity(HttpStatus.NOT_FOUND);*/
     }
 
     @GetMapping("/color/{color}")
@@ -67,34 +68,36 @@ public class CarApi {
         List<Car> carsByColor = carService.getCarsByColor(String.valueOf(color));
 
         if (!carsByColor.isEmpty()) {
+            carService.getCarList().forEach(car -> car.addIf(!car.hasLinks(), () -> linkTo(CarApi.class).slash(car.getId()).withSelfRel()));
+            Link link = linkTo(CarApi.class).withSelfRel();
             return ResponseEntity.ok(carsByColor);
         } else {
             return ResponseEntity.notFound().build();
         }
 
-
     }
 
     @PostMapping
-    public ResponseEntity<Car> addCar(@Validated @RequestBody Car car, BindingResult bindingResult) {
+    public ResponseEntity<Car> addCar(@Validated @RequestBody Car car) {
         boolean isAdd = carService.addCar(car);
 
         if (isAdd) {
             carService.addCar(car);
-            return ResponseEntity.ok().build();
+            return new ResponseEntity<>(HttpStatus.CREATED);
 
         }
-        return ResponseEntity.notFound().build();
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
     @PutMapping
-    public ResponseEntity<Car> modCar(@RequestBody Car newCar, BindingResult bindingResult) {
+    public ResponseEntity<Car> modCar(@Validated @RequestBody Car newCar) {
 
         boolean isDeleted = carService.deleteCar(newCar.getId());
         boolean isUpdate = carService.addCar(newCar);
 
         if (isDeleted && isUpdate) {
-            return ResponseEntity.ok().build();
+            addLinkToCar(newCar);
+            return ResponseEntity.ok(newCar);
         }
         return ResponseEntity.notFound().build();
 
@@ -118,10 +121,14 @@ public class CarApi {
         boolean isCarDeleted = carService.deleteCar(id);
 
         if (isCarDeleted) {
-            return ResponseEntity.ok().build();
+            return new ResponseEntity<>(HttpStatus.ACCEPTED);
         }
         return ResponseEntity.notFound().build();
 
+    }
+
+    private void addLinkToCar(Car car) {
+        car.add(linkTo(CarApi.class).slash(car.getId()).withSelfRel());
     }
 
 

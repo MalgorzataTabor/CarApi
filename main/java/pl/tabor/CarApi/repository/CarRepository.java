@@ -1,35 +1,21 @@
 package pl.tabor.CarApi.repository;
 
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
 import pl.tabor.CarApi.model.Car;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static pl.tabor.CarApi.model.Color.BLACK;
-import static pl.tabor.CarApi.model.Color.RED;
+public interface CarRepository {
 
+    Optional<List<Car>> getAllCars();
 
-@Repository
-public class CarRepository {
+    boolean addCar(Car car);
 
-    private List<Car> carList;
+    boolean deleteCar(long id);
 
-    @Autowired
-    public CarRepository() {
-        carList = new ArrayList<>();
-        initCarList();
-    }
+    Optional<Car> getCarById(long id);
 
-    private void initCarList() {
-        carList.add(new Car(1L, "BMW", "X5", RED));
-        carList.add(new Car(2L, "Fiat", "126P", RED));
-        carList.add(new Car(3L, "Ferrari", "F430", BLACK));
-    }
+    List<Car> getCarsByColor(String color);
 
-    public List<Car> getCarList() {
-        return carList;
-    }
+    Boolean updateCar(long id, Car updateCar);
 }

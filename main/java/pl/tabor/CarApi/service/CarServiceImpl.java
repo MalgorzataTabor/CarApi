@@ -1,27 +1,44 @@
 package pl.tabor.CarApi.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 import pl.tabor.CarApi.model.Car;
 import pl.tabor.CarApi.model.Color;
+
 import pl.tabor.CarApi.repository.CarRepository;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static pl.tabor.CarApi.model.Color.BLACK;
+import static pl.tabor.CarApi.model.Color.RED;
+
 
 @Service
-public class CarServiceImpl implements CarService {
+public class CarServiceImpl implements CarRepository {
 
-    private CarRepository carRepository;
+
     private List<Car> carList;
 
-    @Autowired
-    public CarServiceImpl(CarRepository carRepository) {
-        carList = carRepository.getCarList();
+    public CarServiceImpl() {
+        carList = new ArrayList<>();
+        initCarList();
     }
+
+
+    private void initCarList() {
+        carList.add(new Car(1L, "BMW", "X5", RED));
+        carList.add(new Car(2L, "Fiat", "126P", RED));
+        carList.add(new Car(3L, "Ferrari", "F430", BLACK));
+    }
+
+    public List<Car> getCarList() {
+        return carList;
+    }
+
 
     @Override
     public Optional<List<Car>> getAllCars() {
